@@ -25,7 +25,7 @@ module.exports = (env,argv) => {
             mode: process.env.NODE_ENV,
             entry: {
                 "main": "./src/index.js",
-                "test": "./src/test.js"
+            //                "test": "./src/test.js"
             },
 
             devtool: "source-map",
@@ -80,6 +80,12 @@ module.exports = (env,argv) => {
 
             module: {
                 rules: [
+                    {
+                        test: /\.worker\.js$/,
+                        use: { loader: 'worker-loader' }
+                    },
+
+
                     // babel transpilation ( see .babelrc for babel config)
                     {
                         test: /\.js$/,
