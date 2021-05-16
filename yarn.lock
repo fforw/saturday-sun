@@ -2410,6 +2410,11 @@ cssesc@^3.0.0:
   resolved "https://registry.yarnpkg.com/cssesc/-/cssesc-3.0.0.tgz#37741919903b868565e1c09ea747445cd18983ee"
   integrity sha512-/Tb/JcjK111nNScGob5MNtsntNM1aCNUDipB/TkwZFhyDrrE47SOx/18wF2bbjgc3ZzCSKW1T5nt5EbFoAz/Vg==
 
+d3-octree@^0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/d3-octree/-/d3-octree-0.2.0.tgz#d3b3e578733cd0bbb7b6a15f80b0d7b38ab2e54c"
+  integrity sha512-yPoIxKr4xvZNyKK2bkJybafrNKtBVERbGTUVBovyWxWDQaWnJfWO4ai1jnyBrCeMzpVm/OTAJw2V+EJ9HCuLbQ==
+
 debounce@^1.2.1:
   version "1.2.1"
   resolved "https://registry.yarnpkg.com/debounce/-/debounce-1.2.1.tgz#38881d8f4166a5c5848020c11827b834bcb3e0a5"

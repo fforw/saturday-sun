@@ -95,19 +95,18 @@ window.onload = () => {
     //     start = performance.now();
     // });
 
-
     fetch("media/colors.raw")
         .then(response => checkStatus(response) && response.arrayBuffer())
         .then(buffer => {
 
             const inflated = pako.inflate(new Uint8Array(buffer));
 
-            const [ width, height, numColorBytes ] = new Uint32Array(inflated.buffer, 0, 3);
+            const [ width, height, domains, colorOffset, indexOffset ] = new Uint32Array(inflated.buffer, 0, 5);
 
-            console.log({width, height, numColorBytes, len: inflated.length})
+            //console.log({width, height, domains, colorOffset, indexOffset, len: inflated.length})
 
-            const colors = new Uint32Array(inflated.buffer, 12, numColorBytes/3 - 3);
-            const indexed = new Uint16Array(inflated.buffer, numColorBytes * 4, width * height)
+            const colors = new Uint32Array(inflated.buffer, colorOffset, (indexOffset - colorOffset)/4);
+            const indexed = new Uint16Array(inflated.buffer, indexOffset, width * height)
 
             const canvas = document.getElementById("screen")
 
@@ -125,11 +124,12 @@ window.onload = () => {
             {
                 for (let x = 0; x < width; x++)
                 {
-                    const index = indexed[srcOff] * 3;
+                    const index = indexed[srcOff];
+                    const col = colors[index];
 
-                    const r = toRGB(colors[index    ]);
-                    const g = toRGB(colors[index + 1]);
-                    const b = toRGB(colors[index + 2]);
+                    const r = (col >> 16) & 0xff;
+                    const g = (col >> 8) & 0xff;
+                    const b = col & 0xff;
 
                     data[dstOff] = r;
                     data[dstOff + 1] = g;
@@ -141,7 +141,7 @@ window.onload = () => {
                 }
             }
 
-            console.log(printHex(new Uint8Array(data.buffer, 0, 1024)))
+            //console.log(printHex(new Uint8Array(data.buffer, 0, 1024)))
 
             ctx.putImageData(imageData, 0, 0);
 

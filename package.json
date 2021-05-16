@@ -28,6 +28,7 @@
         "copy-webpack-plugin": "^8.1.0",
         "cross-env": "^7.0.3",
         "css-loader": "^5.2.0",
+        "d3-octree": "^0.2.0",
         "glslify-hex": "^2.1.1",
         "glslify-loader": "^2.0.0",
         "html-webpack-plugin": "^5.3.1",
