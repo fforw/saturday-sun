@@ -1,4 +1,3 @@
-
 const Jimp = require("jimp");
 const pako = require("pako");
 const path = require("path");
@@ -10,21 +9,26 @@ const {toLinear} = require("../src/rgb");
 const MAX = 65536;
 const LIMIT = 6;
 
-const { octree } = require("d3-octree")
+const {octree} = require("d3-octree")
 
 
 function getR(entry)
 {
     return (entry.col >> 16) & 0xff;
 }
+
+
 function getG(entry)
 {
     return (entry.col >> 8) & 0xff;
 }
+
+
 function getB(entry)
 {
     return entry.col & 0xff;
 }
+
 
 const DOMAINS = 2;
 
@@ -37,13 +41,12 @@ function adjustIndexes(tree, baseIndex)
         return;
     }
 
-
-    tree.visit(function(node, r1, g1, b1, r2, g2, b2) {
+    tree.visit(function (node, r1, g1, b1, r2, g2, b2) {
 
         // is it a leaf node?
         if (!node.length)
         {
-            const { data } = node;
+            const {data} = node;
             data.index += baseIndex;
             return true;
         }
@@ -57,21 +60,21 @@ function splitDomains(tree)
 {
     const trees = [];
     const indexes = [];
-    for (let i=0; i < DOMAINS; i++)
+    for (let i = 0; i < DOMAINS; i++)
     {
-        trees[i] = octree(null, getR,getG,getB)
+        trees[i] = octree(null, getR, getG, getB)
         indexes[i] = 0
     }
 
-    tree.visit(function(node, r1, g1, b1, r2, g2, b2) {
+    tree.visit(function (node, r1, g1, b1, r2, g2, b2) {
 
         // is it a leaf node?
         if (!node.length)
         {
-            const { exact } = node.data;
-            exact.sort((a,b) => b.count - a.count)
+            const {exact} = node.data;
+            exact.sort((a, b) => b.count - a.count)
 
-            for (let i=0; i < DOMAINS; i++)
+            for (let i = 0; i < DOMAINS; i++)
             {
                 for (let j = 0; j < exact.length; j++)
                 {
@@ -103,54 +106,66 @@ function splitDomains(tree)
 }
 
 
-function copyColors(tree, colors)
+
+
+function addColors(tree, dataOut)
 {
-    tree.visit(function(node, r1, g1, b1, r2, g2, b2) {
+    tree.visit(function (node, r1, g1, b1, r2, g2, b2) {
 
         // is it a leaf node?
         if (!node.length)
         {
-            const { data } = node;
-            colors[data.index] = data.col;
+            const {data} = node;
+
+            const domain = (data.col >> 24) & 0xff;
+            const r = (data.col >> 16) & 0xff;
+            const g = (data.col >> 8) & 0xff;
+            const b = data.col & 0xff;
+
+            const offset = data.index * 4;
+            dataOut[offset    ] = r;
+            dataOut[offset + 1] = g;
+            dataOut[offset + 2] = b;
+            dataOut[offset + 3] = 255 - domain;
+
             return true;
         }
         return false;
     });
 
-
 }
 
 
-Jimp.read(path.join(__dirname, "../media/saturday-morning.jpg")).then( image => {
+Jimp.read(path.join(__dirname, "../src/saturday-morning.jpg")).then(image => {
 
-    Jimp.read(path.join(__dirname, "../media/saturday-morning-mask.png")).then( mask => {
+    Jimp.read(path.join(__dirname, "../src/saturday-morning-mask.png")).then(mask => {
 
-        const { bitmap } = image;
+        const {bitmap} = image;
 
-        const { width, height, data } = bitmap;
-        const { width : maskWidth, height: maskHeight, data: maskData } = mask.bitmap;
+        const {width, height, data} = bitmap;
+        const {width: maskWidth, height: maskHeight, data: maskData} = mask.bitmap;
 
         if (maskWidth !== width || maskHeight !== height)
         {
-            throw new Error("Image and mask dimensions don't match: image = "+ width + " x " + height+ ", mask ="+ maskWidth + " x " + maskHeight)
+            throw new Error("Image and mask dimensions don't match: image = " + width + " x " + height + ", mask =" + maskWidth + " x " + maskHeight)
         }
-        const tree = octree(null, getR,getG,getB)
+        const tree = octree(null, getR, getG, getB)
 
         // leave space for header
         let colorsEnd = 3;
-        for (let i = 0; i < data.length; i+=4)
+        for (let i = 0; i < data.length; i += 4)
         {
-            const r = data[i    ]
+            const r = data[i]
             const g = data[i + 1]
             const b = data[i + 2]
 
-            const domain = Math.round(maskData[i+1] * (DOMAINS - 1)/255);
+            const domain = Math.round(maskData[i + 1] * (DOMAINS - 1) / 255);
             const col = (domain << 24) | (r << 16) | (g << 8) | b;
 
-            const entry = tree.find(r,g,b, LIMIT)
+            const entry = tree.find(r, g, b, LIMIT)
             if (entry)
             {
-                const { exact } = entry;
+                const {exact} = entry;
 
                 let found = false;
                 for (let j = 0; j < exact.length; j++)
@@ -169,83 +184,73 @@ Jimp.read(path.join(__dirname, "../media/saturday-morning.jpg")).then( image => 
             }
             else
             {
-                tree.add({ col, exact: [{col, count: 1}]})
+                tree.add({col, exact: [{col, count: 1}]})
             }
         }
 
         const domainTrees = splitDomains(tree);
 
-        /// HEADER
-        /// width, height, domains, colorOffset, indexOffset, n0 ... nX
+        const totalColors = domainTrees.reduce((a,b) => a + b.size(), 0)
+
+        return Jimp.create(width, height, 255)
+            .then(
+                newImage => {
+
+                    const {width: w, height: h, data: dataOut} = newImage.bitmap;
+
+                    let off = 0;
+                    for (let i = 0; i < data.length; i += 4)
+                    {
+                        const r = data[i]
+                        const g = data[i + 1]
+                        const b = data[i + 2]
+
+                        const domain = Math.round(maskData[i + 1] * (DOMAINS - 1) / 255);
+
+                        const entry = domainTrees[domain].find(r, g, b, LIMIT * 2);
+
+                        if (!entry)
+                        {
+                            throw new Error("Could not find color for " + r + ", " + g + ", " + b);
+                        }
+                        const ri = entry.index & 0xff;
+                        const gi = (entry.index >> 8) & 0xff;
 
 
-        const headerByteSize = (5 + DOMAINS) * 4;
+                        dataOut[off] = ri;
+                        dataOut[off + 1] = gi;
+                        dataOut[off + 2] = 0;
+                        dataOut[off + 3] = 255;
+                        off += 4;
+                    }
+                    //console.log("DATA", printHex(new Uint8Array(buffer,0, 1024)))
 
-        let colorByteSize = 0;
-        for (let i = 0; i < DOMAINS; i++)
-        {
-            colorByteSize += domainTrees[i].size() * 4;
-        }
+                    //console.log(printHex(dataOut.slice(0, 1024)))
 
-        const buffer = new ArrayBuffer(headerByteSize + colorByteSize + width * height * 2)
+                    newImage.write(
+                        path.join(__dirname, "../media/saturday-morning.index.png"),
+                    )
 
-        console.log("headerByteSize:", headerByteSize)
-        console.log("colorByteSize:", colorByteSize, "(Number of colors: ", colorByteSize / 4 ,")")
-        console.log("Buffer length:", buffer.byteLength)
 
-        const header = new Uint32Array(buffer, 0, headerByteSize / 4);
+                    return Jimp.create(totalColors, 1, 255)
+                        .then(
+                            newImage2 => {
 
-        const indexOffset = headerByteSize + colorByteSize;
-        header[0] = width;
-        header[1] = height;
-        header[2] = DOMAINS;
-        header[3] = headerByteSize;
-        header[4] = indexOffset;
+                                const {data: dataOut} = newImage2.bitmap;
 
-        let offset = headerByteSize;
-        for (let i = 0; i < DOMAINS; i++)
-        {
-            console.log("Offset for Domain #", i, ": ", offset);
-            header[5 + i] = offset;
+                                for (let i = 0; i < domainTrees.length; i++)
+                                {
+                                    const tree = domainTrees[i];
+                                    addColors(tree, dataOut);
+                                }
+                                newImage2.write(
+                                    path.join(__dirname, "../media/saturday-morning.color.png"),
+                                )
 
-            offset += domainTrees[i].size() * 4;
-        }
-
-        const colors = new Uint32Array(buffer, headerByteSize, colorByteSize / 4);
-
-        for (let i = 0; i < domainTrees.length; i++)
-        {
-            const tree = domainTrees[i];
-            copyColors(tree, colors);
-        }
-
-        const indexed = new Uint16Array(buffer, indexOffset , width * height);
-        let off = 0;
-        for (let i = 0; i < data.length; i+=4)
-        {
-            const r = data[i]
-            const g = data[i + 1]
-            const b = data[i + 2]
-
-            const domain = Math.round(maskData[i + 1] * (DOMAINS - 1) / 255);
-
-            const entry = domainTrees[domain].find(r, g, b, LIMIT * 2);
-
-            if (!entry)
-            {
-                throw new Error("Could not find color for " + r + ", " + g + ", " + b);
-            }
-            indexed[off++] = entry.index;
-        }
-
-        //console.log("DATA", printHex(new Uint8Array(buffer,0, 1024)))
-
-        fs.writeFileSync(
-            path.join(__dirname, "../media/colors.raw"),
-            pako.deflate(new Uint8Array(buffer)),
-            null
-        )
-
+                            }
+                        )
+                }
+            )
 
     })
 })

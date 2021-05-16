@@ -1,4 +1,4 @@
-import * as PIXI from 'pixi.js'
+import * as PIXI from "pixi.js"
 
 import domready from "domready"
 // noinspection ES6UnusedImports
@@ -8,16 +8,20 @@ import pako from "pako";
 import { toRGB } from "./rgb";
 import printHex from "./printHex";
 
+import fadeShader from "./fade-shader.frag"
+
+
 const PHI = (1 + Math.sqrt(5)) / 2;
 const TAU = Math.PI * 2;
 const DEG2RAD_FACTOR = TAU / 360;
 
 const config = {
-    width: 0,
-    height: 0
+    width: 1900,
+    height: 950
 };
 
 let app, saturdayMorning;
+
 
 function onResize()
 {
@@ -43,16 +47,18 @@ function onResize()
     saturdayMorning.scale.y = height / 950
 
     app.renderer.resize(width, height);
-
 }
 
 
-function checkStatus(response) {
-    if (!response.ok) {
+function checkStatus(response)
+{
+    if (!response.ok)
+    {
         throw new Error(`HTTP ${response.status} - ${response.statusText}`);
     }
     return response;
 }
+
 
 let start, song;
 
@@ -60,96 +66,60 @@ window.onload = () => {
 
     song = document.getElementById("song");
 
-
     const {width, height} = config;
 
+    PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST
 
-    // app = new PIXI.Application({
-    //     width,
-    //     height,
-    //     antialias: true
-    // });
-    //
-    // document.body.appendChild(app.view);
-    //
-    // // load the texture we need
-    // PIXI.Loader.shared.add('saturdayMorning', 'media/saturday-morning.jpg').load((loader, resources) => {
-    //
-    //
-    //     saturdayMorning = new PIXI.Sprite(resources.saturdayMorning.texture);
-    //
-    //
-    //
-    //     //app.stage.addChild(saturdayMorning);
-    //
-    //     // Listen for frame updates
-    //     app.ticker.add(() => {
-    //
-    //         const now = performance.now();
-    //
-    //     });
-    //
-    //     onResize();
-    //     window.addEventListener("resize", onResize, true);
-    //
-    //     start = performance.now();
-    // });
+    app = new PIXI.Application({
+        width,
+        height
+    });
+    app.stop();
 
-    fetch("media/colors.raw")
-        .then(response => checkStatus(response) && response.arrayBuffer())
-        .then(buffer => {
+    document.body.appendChild(app.view);
 
-            const inflated = pako.inflate(new Uint8Array(buffer));
 
-            const [ width, height, domains, colorOffset, indexOffset ] = new Uint32Array(inflated.buffer, 0, 5);
+    // load the texture we need
+    PIXI.Loader.shared
+        .add("saturdayMorning", "media/saturday-morning.index.png")
+        .add("saturdayMorningColor", "media/saturday-morning.color.png")
+        .load((loader, resources) => {
 
-            //console.log({width, height, domains, colorOffset, indexOffset, len: inflated.length})
 
-            const colors = new Uint32Array(inflated.buffer, colorOffset, (indexOffset - colorOffset)/4);
-            const indexed = new Uint16Array(inflated.buffer, indexOffset, width * height)
+            console.log(resources.saturdayMorningColor.texture.width);
+        //console.log({width, height, domains, colorOffset, indexOffset, len: inflated.length})
 
-            const canvas = document.getElementById("screen")
+        saturdayMorning = new PIXI.Sprite(resources.saturdayMorning.texture);
 
-            canvas.width = width;
-            canvas.height = height;
-
-            const ctx = canvas.getContext("2d");
-
-            const imageData = ctx.createImageData(width, height)
-
-            const { data } = imageData;
-
-            let srcOff = 0, dstOff = 0;
-            for (let y = 0; y < height; y++)
-            {
-                for (let x = 0; x < width; x++)
+        saturdayMorning.filters = [
+            new PIXI.Filter(
+                null,
+                fadeShader,//.replace(/0000/g, colors.length).replace(/COLORS/, colors.map(c => c).join(",")),
                 {
-                    const index = indexed[srcOff];
-                    const col = colors[index];
-
-                    const r = (col >> 16) & 0xff;
-                    const g = (col >> 8) & 0xff;
-                    const b = col & 0xff;
-
-                    data[dstOff] = r;
-                    data[dstOff + 1] = g;
-                    data[dstOff + 2] = b;
-                    data[dstOff + 3] = 255;
-
-                    srcOff += 1;
-                    dstOff += 4;
+                    width,
+                    height,
+                    uColors: resources.saturdayMorningColor.texture,
+                    uColorsCount: Math.floor(resources.saturdayMorningColor.texture.width)
                 }
-            }
+            )
+        ]
 
-            //console.log(printHex(new Uint8Array(data.buffer, 0, 1024)))
+        app.stage.addChild(saturdayMorning);
 
-            ctx.putImageData(imageData, 0, 0);
+        onResize();
+        app.start();
 
 
+        //app.stage.addChild(saturdayMorning);
 
-            //console.log({colors, indexed})
+        // Listen for frame updates
+        app.ticker.add(() => {
+            const now = performance.now();
+        });
 
-        })
-        .catch(err => console.error(err)); // Never forget the final catch!
+        window.addEventListener("resize", onResize, true);
+
+        start = performance.now();
+    });
 
 };
