@@ -25,7 +25,7 @@ module.exports = (env,argv) => {
             mode: process.env.NODE_ENV,
             entry: {
                 "main": "./src/index.js",
-            //                "test": "./src/test.js"
+                "editor": "./src/editor/editor.js"
             },
 
             devtool: "source-map",
@@ -50,9 +50,9 @@ module.exports = (env,argv) => {
 
                 new HtmlWebpackPlugin({
                     inject: "body",
-                    chunks: ["vendors", "test"],
-                    template: "src/template.html",
-                    filename: "test.html"
+                    chunks: ["vendors", "editor"],
+                    template: "src/editor/editor.html",
+                    filename: "editor.html"
                 }),
 
                 new MiniCssExtractPlugin({
@@ -70,6 +70,12 @@ module.exports = (env,argv) => {
                         patterns: [
                             {
                                 from: "media/**/*"
+                            },
+                            {
+                                from: "css/**/*"
+                            },
+                            {
+                                from: "webfonts/**/*"
                             }
                         ]
                     }

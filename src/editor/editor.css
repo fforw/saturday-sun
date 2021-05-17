@@ -1,0 +1,56 @@
+body
+{
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    background-color: #16161d;
+    color: #ccc;
+}
+
+#screen
+{
+    position: absolute;
+    left:0;
+    top:0;
+}
+
+.hidden
+{
+    position: absolute;
+    top: 0;
+    left: -10000px;
+}
+
+.github
+{
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background: #000;
+    color: #fff;
+    font-family: monospace;
+    font-size: 0.8rem;
+}
+
+#controls
+{
+    position: absolute;
+    left: 0;
+    bottom: 0;
+}
+
+#editor-ui
+{
+    background-color: #252532;
+    z-index: 100;
+}
+
+#editor-ui .main
+{
+    overflow: auto;
+}
+
+.color-popup
+{
+    z-index: 1000;
+}
