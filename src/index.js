@@ -1,14 +1,8 @@
 import * as PIXI from "pixi.js"
-
-import domready from "domready"
 // noinspection ES6UnusedImports
 import STYLE from "./style.css"
-import Fader from "./Fader";
-import pako from "pako";
-import { toRGB } from "./rgb";
-import printHex from "./printHex";
-
-import fadeShader from "./fade-shader.frag"
+import { createFaderSprite } from "./createFaderSprite";
+import { createAudioPlayer } from "./createAudioPlayer";
 
 
 const PHI = (1 + Math.sqrt(5)) / 2;
@@ -20,7 +14,7 @@ const config = {
     height: 950
 };
 
-let app, saturdayMorning;
+let app, saturdayMorning, leftPadding = 0;
 
 
 function onResize()
@@ -41,7 +35,9 @@ function onResize()
     config.width = width;
     config.height = height;
 
-    app.view.style.paddingLeft = Math.round((origWidth - width) / 2) + "px";
+    leftPadding = Math.round((origWidth - width) / 2);
+
+    app.view.style.paddingLeft = leftPadding + "px";
 
     saturdayMorning.scale.x = width / 1900
     saturdayMorning.scale.y = height / 950
@@ -49,22 +45,11 @@ function onResize()
     app.renderer.resize(width, height);
 }
 
-
-function checkStatus(response)
-{
-    if (!response.ok)
-    {
-        throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-    }
-    return response;
-}
-
-
-let start, song;
+let song, startTime, prevTime, colorTexture, fadeFilter;
 
 window.onload = () => {
 
-    song = document.getElementById("song");
+    song = createAudioPlayer(true);
 
     const {width, height} = config;
 
@@ -78,48 +63,40 @@ window.onload = () => {
 
     document.body.appendChild(app.view);
 
-
     // load the texture we need
     PIXI.Loader.shared
-        .add("saturdayMorning", "media/saturday-morning.index.png")
-        .add("saturdayMorningColor", "media/saturday-morning.color.png")
+        .add("saturdayMorningRes", "media/saturday-morning.index.png")
+        .add("saturdayMorningColorRes", "media/saturday-morning.color.png")
         .load((loader, resources) => {
 
 
-            console.log(resources.saturdayMorningColor.texture.width);
-        //console.log({width, height, domains, colorOffset, indexOffset, len: inflated.length})
+            const { saturdayMorningRes, saturdayMorningColorRes } = resources;
 
-        saturdayMorning = new PIXI.Sprite(resources.saturdayMorning.texture);
+            ({sprite: saturdayMorning, filter: fadeFilter, colorTexture} = createFaderSprite( saturdayMorningRes, saturdayMorningColorRes , width, height));
 
-        saturdayMorning.filters = [
-            new PIXI.Filter(
-                null,
-                fadeShader,//.replace(/0000/g, colors.length).replace(/COLORS/, colors.map(c => c).join(",")),
-                {
-                    width,
-                    height,
-                    uColors: resources.saturdayMorningColor.texture,
-                    uColorsCount: Math.floor(resources.saturdayMorningColor.texture.width)
-                }
-            )
-        ]
+            app.stage.addChild(saturdayMorning);
+            onResize();
 
-        app.stage.addChild(saturdayMorning);
+            //app.stage.addChild(saturdayMorning);
 
-        onResize();
-        app.start();
+            // Listen for frame updates
+            app.ticker.add(() => {
+                const now = performance.now();
 
+                const delta = now - prevTime;
 
-        //app.stage.addChild(saturdayMorning);
+                // blob.position.x += delta * 0.05;
+                // blob.position.y += delta * 0.05;
 
-        // Listen for frame updates
-        app.ticker.add(() => {
-            const now = performance.now();
+                fadeFilter.uniforms.time = now - startTime;
+
+                prevTime = now;
+            });
+
+            window.addEventListener("resize", onResize, true);
+
+            startTime = prevTime = performance.now();
+            app.start();
         });
-
-        window.addEventListener("resize", onResize, true);
-
-        start = performance.now();
-    });
 
 };

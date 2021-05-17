@@ -36,7 +36,6 @@
         "loader-utils": "^2.0.0",
         "mini-css-extract-plugin": "^1.4.0",
         "mocha": "^8.3.2",
-        "pako": "^2.0.3",
         "power-assert": "^1.6.1",
         "raw-loader": "^4.0.2",
         "shelljs": "^0.8.4",

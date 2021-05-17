@@ -135,10 +135,9 @@ function addColors(tree, dataOut)
 
 }
 
+Jimp.read(path.join(__dirname, "../media/saturday-morning.jpg")).then(image => {
 
-Jimp.read(path.join(__dirname, "../src/saturday-morning.jpg")).then(image => {
-
-    Jimp.read(path.join(__dirname, "../src/saturday-morning-mask.png")).then(mask => {
+    Jimp.read(path.join(__dirname, "../media/saturday-morning-mask.png")).then(mask => {
 
         const {bitmap} = image;
 
@@ -191,6 +190,8 @@ Jimp.read(path.join(__dirname, "../src/saturday-morning.jpg")).then(image => {
         const domainTrees = splitDomains(tree);
 
         const totalColors = domainTrees.reduce((a,b) => a + b.size(), 0)
+
+        console.log("TOTAL COLORS", totalColors)
 
         return Jimp.create(width, height, 255)
             .then(
